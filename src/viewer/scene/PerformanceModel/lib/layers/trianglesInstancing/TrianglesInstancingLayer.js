@@ -18,6 +18,12 @@ const tempVec4b = math.vec4([0, 0, 0, 1]);
 const tempVec4c = math.vec4([0, 0, 0, 1]);
 const tempVec3fa = new Float32Array(3);
 
+const tempVec3a = math.vec3();
+const tempVec3b = math.vec3();
+const tempVec3c = math.vec3();
+const tempVec3d = math.vec3();
+const tempVec3e = math.vec3();
+
 /**
  * @private
  */
@@ -56,35 +62,43 @@ class TrianglesInstancingLayer {
         const stateCfg = {
             positionsDecodeMatrix: math.mat4(),
             numInstances: 0,
-            obb: math.OBB3(),
-            rtcCenter: null
+            obb: math.OBB3()
         };
 
         const preCompressed = (!!cfg.positionsDecodeMatrix);
+        const pickSurfacePrecisionEnabled = this.model.scene.pickSurfacePrecisionEnabled;
         const gl = this.model.scene.canvas.gl;
 
         if (cfg.positions) {
 
             if (preCompressed) {
 
-                let normalized = false;
+                const normalized = false;
                 stateCfg.positionsBuf = new ArrayBuf(gl, gl.ARRAY_BUFFER, cfg.positions, cfg.positions.length, 3, gl.STATIC_DRAW, normalized);
                 stateCfg.positionsDecodeMatrix.set(cfg.positionsDecodeMatrix);
 
-                let localAABB = math.collapseAABB3();
+                const localAABB = math.collapseAABB3();
                 math.expandAABB3Points3(localAABB, cfg.positions);
                 geometryCompressionUtils.decompressAABB(localAABB, stateCfg.positionsDecodeMatrix);
                 math.AABB3ToOBB3(localAABB, stateCfg.obb);
 
+                if (pickSurfacePrecisionEnabled) {
+                    stateCfg.quantizedPositions = cfg.positions;
+                }
+
             } else {
 
-                let lenPositions = cfg.positions.length;
-                let localAABB = math.collapseAABB3();
+                const lenPositions = cfg.positions.length;
+                const localAABB = math.collapseAABB3();
                 math.expandAABB3Points3(localAABB, cfg.positions);
                 math.AABB3ToOBB3(localAABB, stateCfg.obb);
                 const quantizedPositions = quantizePositions(cfg.positions, localAABB, stateCfg.positionsDecodeMatrix);
                 let normalized = false;
                 stateCfg.positionsBuf = new ArrayBuf(gl, gl.ARRAY_BUFFER, quantizedPositions, lenPositions, 3, gl.STATIC_DRAW, normalized);
+
+                if (pickSurfacePrecisionEnabled) {
+                    stateCfg.quantizedPositions = quantizedPositions;
+                }
             }
         }
 
@@ -105,6 +119,10 @@ class TrianglesInstancingLayer {
 
         if (cfg.indices) {
             stateCfg.indicesBuf = new ArrayBuf(gl, gl.ELEMENT_ARRAY_BUFFER, bigIndicesSupported ? new Uint32Array(cfg.indices) : new Uint16Array(cfg.indices), cfg.indices.length, 1, gl.STATIC_DRAW);
+
+            if (pickSurfacePrecisionEnabled) {
+                stateCfg.indices = cfg.indices;
+            }
         }
 
         let edgeIndices = cfg.edgeIndices;
@@ -112,7 +130,6 @@ class TrianglesInstancingLayer {
             edgeIndices = buildEdgeIndices(cfg.positions, cfg.indices, null, cfg.edgeThreshold || 10);
         }
         stateCfg.edgeIndicesBuf = new ArrayBuf(gl, gl.ELEMENT_ARRAY_BUFFER, bigIndicesSupported ? new Uint32Array(edgeIndices) : new Uint16Array(edgeIndices), edgeIndices.length, 1, gl.STATIC_DRAW);
-
 
         this._state = new RenderState(stateCfg);
 
@@ -297,7 +314,15 @@ class TrianglesInstancingLayer {
         this._state.numInstances++;
 
         const portionId = this._portions.length;
-        this._portions.push({});
+
+        const portion = {};
+
+        if (this.model.scene.pickSurfacePrecisionEnabled) {
+            portion.matrix = meshMatrix.slice();
+            portion.inverseMatrix = null; // Lazy-computed in precisionRayPickSurface
+        }
+
+        this._portions.push(portion);
 
         this._numPortions++;
         this.model.numPortions++;
@@ -895,6 +920,96 @@ class TrianglesInstancingLayer {
         }
     }
 
+    //-----------------------------------------------------------------------------------------
+
+    precisionRayPickSurface(portionId, worldRayOrigin, worldRayDir, worldSurfacePos) {
+
+        if (!this.model.scene.pickSurfacePrecisionEnabled) {
+            return false;
+        }
+
+        const state = this._state;
+        const portion = this._portions[portionId];
+
+        if (!portion) {
+            this.model.error("portion not found: " + portionId);
+            return false;
+        }
+
+        if (!portion.inverseMatrix) {
+            portion.inverseMatrix = math.inverseMat4(portion.matrix, math.mat4());
+        }
+
+        const quantizedPositions = state.quantizedPositions;
+        const indices = state.indices;
+        const rtcCenter = state.rtcCenter;
+
+        const rtcRayOrigin = rtcCenter ? math.subVec3(worldRayOrigin, rtcCenter, tempVec3a) : worldRayOrigin;  // World -> RTC
+
+        tempVec4a[0] = rtcRayOrigin[0];
+        tempVec4a[1] = rtcRayOrigin[1];
+        tempVec4a[2] = rtcRayOrigin[2];
+        tempVec4a[3] = 1.0;
+
+        math.transformPoint4(portion.inverseMatrix, tempVec4a, tempVec4b);
+
+        rtcRayOrigin[0] = tempVec4b[0];
+        rtcRayOrigin[1] = tempVec4b[1];
+        rtcRayOrigin[2] = tempVec4b[2];
+
+        const rtcRayDir = math.transformVec3(portion.inverseMatrix, worldRayDir, tempVec3b);
+
+        const a = tempVec3c;
+        const b = tempVec3d;
+        const c = tempVec3e;
+
+        for (let i = 0, len = indices.length; i < len; i += 3) {
+
+            const ia = indices[i + 0] * 3;
+            const ib = indices[i + 1] * 3;
+            const ic = indices[i + 2] * 3;
+
+            a[0] = quantizedPositions[ia];
+            a[1] = quantizedPositions[ia + 1];
+            a[2] = quantizedPositions[ia + 2];
+
+            b[0] = quantizedPositions[ib];
+            b[1] = quantizedPositions[ib + 1];
+            b[2] = quantizedPositions[ib + 2];
+
+            c[0] = quantizedPositions[ic];
+            c[1] = quantizedPositions[ic + 1];
+            c[2] = quantizedPositions[ic + 2];
+
+            math.decompressPosition(a, state.positionsDecodeMatrix);
+            math.decompressPosition(b, state.positionsDecodeMatrix);
+            math.decompressPosition(c, state.positionsDecodeMatrix);
+
+            if (math.rayTriangleIntersect(rtcRayOrigin, rtcRayDir, a, b, c, worldSurfacePos)) {
+
+                tempVec4a[0] = worldSurfacePos[0];
+                tempVec4a[1] = worldSurfacePos[1];
+                tempVec4a[2] = worldSurfacePos[2];
+                tempVec4a[3] = 1.0;
+
+                math.transformPoint4(portion.matrix, tempVec4a, tempVec4b);
+
+                // TODO: transform with PerformanceModel#matrix
+
+                worldSurfacePos[0] = tempVec4b[0];
+                worldSurfacePos[1] = tempVec4b[1];
+                worldSurfacePos[2] = tempVec4b[2];
+
+                if (rtcCenter) {
+                    math.addVec3(worldSurfacePos, rtcCenter); // RTC -> World
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     destroy() {
         const state = this._state;

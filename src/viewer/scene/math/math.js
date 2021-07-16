@@ -4260,11 +4260,11 @@ const math = {
      */
     rayTriangleIntersect: ((() => {
 
-        const tempVec3 = new Float32Array(3);
-        const tempVec3b = new Float32Array(3);
-        const tempVec3c = new Float32Array(3);
-        const tempVec3d = new Float32Array(3);
-        const tempVec3e = new Float32Array(3);
+        const tempVec3 = new FloatArrayType(3);
+        const tempVec3b = new FloatArrayType(3);
+        const tempVec3c = new FloatArrayType(3);
+        const tempVec3d = new FloatArrayType(3);
+        const tempVec3e = new FloatArrayType(3);
 
         return (origin, dir, a, b, c, isect) => {
 
@@ -4309,10 +4309,10 @@ const math = {
      */
     rayPlaneIntersect: ((() => {
 
-        const tempVec3 = new Float32Array(3);
-        const tempVec3b = new Float32Array(3);
-        const tempVec3c = new Float32Array(3);
-        const tempVec3d = new Float32Array(3);
+        const tempVec3 = new FloatArrayType(3);
+        const tempVec3b = new FloatArrayType(3);
+        const tempVec3c = new FloatArrayType(3);
+        const tempVec3d = new FloatArrayType(3);
 
         return (origin, dir, a, b, c, isect) => {
 
@@ -4493,12 +4493,12 @@ const math = {
      */
     buildNormals: ((() => {
 
-        const a = new Float32Array(3);
-        const b = new Float32Array(3);
-        const c = new Float32Array(3);
-        const ab = new Float32Array(3);
-        const ac = new Float32Array(3);
-        const crossVec = new Float32Array(3);
+        const a = new FloatArrayType(3);
+        const b = new FloatArrayType(3);
+        const c = new FloatArrayType(3);
+        const ab = new FloatArrayType(3);
+        const ac = new FloatArrayType(3);
+        const crossVec = new FloatArrayType(3);
 
         return (positions, indices, normals) => {
 
@@ -4530,7 +4530,7 @@ const math = {
                 math.subVec3(b, a, ab);
                 math.subVec3(c, a, ac);
 
-                const normVec = new Float32Array(3);
+                const normVec = new FloatArrayType(3);
 
                 math.normalizeVec3(math.cross3Vec3(ab, ac, crossVec), normVec);
 
@@ -5077,6 +5077,7 @@ const math = {
 
 
     decompressPosition(position, decodeMatrix, dest) {
+        dest = dest || position;
         dest[0] = position[0] * decodeMatrix[0] + decodeMatrix[12];
         dest[1] = position[1] * decodeMatrix[5] + decodeMatrix[13];
         dest[2] = position[2] * decodeMatrix[10] + decodeMatrix[14];
