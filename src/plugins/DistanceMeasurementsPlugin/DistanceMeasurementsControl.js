@@ -61,12 +61,16 @@ class DistanceMeasurementsControl extends Component {
         let over = false;
         let entity = null;
         let worldPos = math.vec3();
+        const hoverCanvasPos = math.vec2();
+
+        const pickSurfacePrecisionEnabled = this.plugin.viewer.scene.pickSurfacePrecisionEnabled;
 
         this._onhoverSurface = cameraControl.on("hoverSurface", e => {
 
             over = true;
             entity = e.entity;
             worldPos.set(e.worldPos);
+            hoverCanvasPos.set(e.canvasPos);
 
             if (this._state === HOVERING) {
                 document.body.style.cursor = "pointer";
@@ -110,6 +114,16 @@ class DistanceMeasurementsControl extends Component {
                         this._prevDistMeasurement.axisVisible = true;
                     }
                     if (over) {
+                        if (pickSurfacePrecisionEnabled) {
+                            const pickResult = this.plugin.viewer.scene.pick({
+                                canvasPos: hoverCanvasPos,
+                                pickSurface: true,
+                                pickSurfacePrecision: true
+                            });
+                            if (pickResult && pickResult.worldPos) {
+                                worldPos.set(pickResult.worldPos);
+                            }
+                        }
                         this._currentDistMeasurement = this.plugin.createMeasurement({
                             id: math.createUUID(),
                             origin: {
@@ -119,7 +133,8 @@ class DistanceMeasurementsControl extends Component {
                             target: {
                                 entity: entity,
                                 worldPos: worldPos
-                            }
+                            },
+                            approximate: true
                         });
                         this._currentDistMeasurement.axisVisible = false;
                         this._currentDistMeasurement.targetVisible = true;
@@ -130,6 +145,17 @@ class DistanceMeasurementsControl extends Component {
 
                 case FINDING_TARGET:
                     if (over) {
+                        if (pickSurfacePrecisionEnabled) {
+                            const pickResult = this.plugin.viewer.scene.pick({
+                                canvasPos: hoverCanvasPos,
+                                pickSurface: true,
+                                pickSurfacePrecision: true
+                            });
+                            if (pickResult && pickResult.worldPos) {
+                                this._currentDistMeasurement.target.worldPos = pickResult.worldPos;
+                            }
+                            this._currentDistMeasurement.approximate = false;
+                        }
                         this._currentDistMeasurement.axisVisible = true;
                         this._currentDistMeasurement.targetVisible = true;
                         this._currentDistMeasurement = null;
