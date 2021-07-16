@@ -902,28 +902,18 @@ const Renderer = function (scene, options) {
                     // JavaScript-based ray-picking - slow and precise
 
                     if (params.canvasPos) {
-
                         math.canvasPosToWorldRay(scene.canvas.canvas, pickViewMatrix, pickProjMatrix, canvasPos, worldRayOrigin, worldRayDir);
+                    }
 
-                        if (pickable.precisionRayPickSurface(worldRayOrigin, worldRayDir, worldSurfacePos)) {
+                    if (pickable.precisionRayPickSurface(worldRayOrigin, worldRayDir, worldSurfacePos)) {
 
-                            pickResult.worldPos = worldSurfacePos;
+                        pickResult.worldPos = worldSurfacePos;
 
-                            if (params.pickSurfaceNormal !== false) {
-                                gpuPickWorldNormal(pickable, canvasPos, pickViewMatrix, pickProjMatrix, pickResult);
-                            }
+                        if (params.pickSurfaceNormal !== false) {
+                            gpuPickWorldNormal(pickable, canvasPos, pickViewMatrix, pickProjMatrix, pickResult);
                         }
 
-                    } else {
-
-                        if (pickable.precisionRayPickSurface(worldRayOrigin, worldRayDir, worldSurfacePos)) {
-
-                            pickResult.worldPos = worldSurfacePos;
-
-                            if (params.pickSurfaceNormal !== false) {
-                                gpuPickWorldNormal(pickable, canvasPos, pickViewMatrix, pickProjMatrix, pickResult);
-                            }
-                        }
+                        pickResult.pickSurfacePrecision = true;
                     }
 
                 } else {
@@ -935,6 +925,8 @@ const Renderer = function (scene, options) {
                         gpuPickTriangle(pickable, canvasPos, pickViewMatrix, pickProjMatrix, pickResult);
 
                         pickable.pickTriangleSurface(pickViewMatrix, pickProjMatrix, pickResult);
+
+                        pickResult.pickSurfacePrecision = false;
 
                     } else {
 
@@ -948,6 +940,8 @@ const Renderer = function (scene, options) {
                             if (params.pickSurfaceNormal !== false) {
                                 gpuPickWorldNormal(pickable, canvasPos, pickViewMatrix, pickProjMatrix, pickResult);
                             }
+
+                            pickResult.pickSurfacePrecision = false;
                         }
                     }
                 }
