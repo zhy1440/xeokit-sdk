@@ -23,6 +23,7 @@ const tempVec3b = math.vec3();
 const tempVec3c = math.vec3();
 const tempVec3d = math.vec3();
 const tempVec3e = math.vec3();
+const tempVec3f = math.vec3();
 
 /**
  * @private
@@ -943,25 +944,25 @@ class TrianglesInstancingLayer {
         const quantizedPositions = state.quantizedPositions;
         const indices = state.indices;
         const rtcCenter = state.rtcCenter;
+        const offset = portion.offset;
 
-        const rtcRayOrigin = rtcCenter ? math.subVec3(worldRayOrigin, rtcCenter, tempVec3a) : worldRayOrigin;  // World -> RTC
+        const rtcRayOrigin = tempVec3a;
+        const rtcRayDir = tempVec3b;
 
-        tempVec4a[0] = rtcRayOrigin[0];
-        tempVec4a[1] = rtcRayOrigin[1];
-        tempVec4a[2] = rtcRayOrigin[2];
-        tempVec4a[3] = 1.0;
+        rtcRayOrigin.set(rtcCenter ? math.subVec3(worldRayOrigin, rtcCenter, tempVec3c) : worldRayOrigin);  // World -> RTC
+        rtcRayDir.set(worldRayDir);
 
-        math.transformPoint4(portion.inverseMatrix, tempVec4a, tempVec4b);
+        if (offset) {
+            math.subVec3(rtcRayOrigin, offset);
+        }
 
-        rtcRayOrigin[0] = tempVec4b[0];
-        rtcRayOrigin[1] = tempVec4b[1];
-        rtcRayOrigin[2] = tempVec4b[2];
+        math.transformRay(this.model.worldNormalMatrix, rtcRayOrigin, rtcRayDir, rtcRayOrigin, rtcRayDir);
 
-        const rtcRayDir = math.transformVec3(portion.inverseMatrix, worldRayDir, tempVec3b);
+        math.transformRay(portion.inverseMatrix, rtcRayOrigin, rtcRayDir, rtcRayOrigin, rtcRayDir);
 
-        const a = tempVec3c;
-        const b = tempVec3d;
-        const c = tempVec3e;
+        const a = tempVec3d;
+        const b = tempVec3e;
+        const c = tempVec3f;
 
         for (let i = 0, len = indices.length; i < len; i += 3) {
 
@@ -987,21 +988,16 @@ class TrianglesInstancingLayer {
 
             if (math.rayTriangleIntersect(rtcRayOrigin, rtcRayDir, a, b, c, worldSurfacePos)) {
 
-                tempVec4a[0] = worldSurfacePos[0];
-                tempVec4a[1] = worldSurfacePos[1];
-                tempVec4a[2] = worldSurfacePos[2];
-                tempVec4a[3] = 1.0;
+                math.transformPoint3(portion.matrix, worldSurfacePos, worldSurfacePos);
 
-                math.transformPoint4(portion.matrix, tempVec4a, tempVec4b);
+                math.transformPoint3(this.model.worldMatrix, worldSurfacePos, worldSurfacePos);
 
-                // TODO: transform with PerformanceModel#matrix
-
-                worldSurfacePos[0] = tempVec4b[0];
-                worldSurfacePos[1] = tempVec4b[1];
-                worldSurfacePos[2] = tempVec4b[2];
+                if (offset) {
+                    math.addVec3(worldSurfacePos, offset);
+                }
 
                 if (rtcCenter) {
-                    math.addVec3(worldSurfacePos, rtcCenter); // RTC -> World
+                    math.addVec3(worldSurfacePos, rtcCenter);
                 }
 
                 return true;

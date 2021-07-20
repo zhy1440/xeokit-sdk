@@ -21,6 +21,8 @@ const tempVec3a = math.vec3();
 const tempVec3b = math.vec3();
 const tempVec3c = math.vec3();
 const tempVec3d = math.vec3();
+const tempVec3e = math.vec3();
+const tempVec3f = math.vec3();
 
 /**
  * @private
@@ -1027,16 +1029,21 @@ class TrianglesBatchingLayer {
         const rtcCenter = state.rtcCenter;
         const offset = portion.offset;
 
-        const rtcRayOrigin = rtcCenter ? math.subVec3(worldRayOrigin, rtcCenter, tempVec3a) : worldRayOrigin;  // World -> RTC
-        const rtcRayDir = worldRayDir;
+        const rtcRayOrigin = tempVec3a;
+        const rtcRayDir = tempVec3b;
+
+        rtcRayOrigin.set(rtcCenter ? math.subVec3(worldRayOrigin, rtcCenter, tempVec3c) : worldRayOrigin);  // World -> RTC
+        rtcRayDir.set(worldRayDir);
 
         if (offset) {
             math.subVec3(rtcRayOrigin, offset);
         }
 
-        const a = tempVec3b;
-        const b = tempVec3c;
-        const c = tempVec3d;
+        math.transformRay(this.model.worldNormalMatrix, rtcRayOrigin, rtcRayDir, rtcRayOrigin, rtcRayDir); // RTC -> local
+
+        const a = tempVec3d;
+        const b = tempVec3e;
+        const c = tempVec3f;
 
         for (let i = 0, len = indices.length; i < len; i += 3) {
 
@@ -1062,14 +1069,14 @@ class TrianglesBatchingLayer {
 
             if (math.rayTriangleIntersect(rtcRayOrigin, rtcRayDir, a, b, c, worldSurfacePos)) {
 
-                // TODO: transform with PerformanceModel#matrix
+                math.transformPoint3(this.model.worldMatrix, worldSurfacePos, worldSurfacePos);
 
                 if (offset) {
                     math.addVec3(worldSurfacePos, offset);
                 }
 
                 if (rtcCenter) {
-                    math.addVec3(worldSurfacePos, rtcCenter); // RTC -> World
+                    math.addVec3(worldSurfacePos, rtcCenter);
                 }
 
                 return true;
