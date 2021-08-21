@@ -1,4 +1,6 @@
-/** @private */
+/**
+ * @private
+ */
 class Map {
 
     constructor(items, baseId) {
@@ -13097,7 +13099,7 @@ class RenderBuffer {
 
 /**
  * @desc Pick result returned by {@link Scene#pick}.
- *
+ * @private
  */
 class PickResult {
 
@@ -13800,6 +13802,9 @@ class ArrayBuf {
     }
 }
 
+/**
+ * @private
+ */
 class OcclusionLayer {
 
     constructor(scene, rtcCenter) {
@@ -14016,6 +14021,7 @@ const tempVec3a$Z = math.vec3();
 
 /**
  * Manages occlusion testing. Private member of a Renderer.
+ * @private
  */
 class OcclusionTester {
 
@@ -15124,7 +15130,7 @@ function createSampleOffsets(kernelRadius, uvIncrement) {
 /**
  * @private
  */
-const Renderer = function (scene, options) {
+function Renderer(scene, options) {
 
     options = options || {};
 
@@ -16253,6 +16259,7 @@ const Renderer = function (scene, options) {
 
     /**
      * Adds a {@link Marker} for occlusion testing.
+     * @private
      * @param marker
      */
     this.addMarker = function (marker) {
@@ -16421,7 +16428,7 @@ const Renderer = function (scene, options) {
             this._occlusionTester.destroy();
         }
     };
-};
+}
 
 /**
  * @desc Meditates mouse, touch and keyboard events for various interaction controls.
@@ -25028,7 +25035,9 @@ class LinesMaterial extends Material {
 }
 
 // Cached vars to avoid garbage collection
-
+/**
+ * @private
+ */
 function getEntityIDMap(scene, entityIds) {
     const map = {};
     let entityId;
@@ -25328,6 +25337,9 @@ function getEntityIDMap(scene, entityIds) {
  *
  * @class Scene
  */
+/**
+ * @private
+ */
 class Scene extends Component {
 
     /**
@@ -25609,7 +25621,9 @@ class Scene extends Component {
             transparent: transparent,
             alphaDepthMask: alphaDepthMask
         });
-
+        /**
+         * @private
+         */
         this._sectionPlanesState = new (function () {
 
             this.sectionPlanes = [];
@@ -25652,7 +25666,9 @@ class Scene extends Component {
                 }
             };
         })();
-
+        /**
+         * @private
+         */
         this._lightsState = new (function () {
 
             const DEFAULT_AMBIENT = math.vec4([0, 0, 0, 0]);
@@ -27433,7 +27449,7 @@ class Scene extends Component {
  * @private
  */
 
-const DrawShaderSource = function (mesh) {
+function DrawShaderSource(mesh) {
     if (mesh._material._state.type === "LambertMaterial") {
         this.vertex = buildVertexLambert(mesh);
         this.fragment = buildFragmentLambert(mesh);
@@ -27441,8 +27457,7 @@ const DrawShaderSource = function (mesh) {
         this.vertex = buildVertexDraw(mesh);
         this.fragment = buildFragmentDraw(mesh);
     }
-};
-
+}
 const TEXTURE_DECODE_FUNCS$2 = {
     "linear": "linearToLinear",
     "sRGB": "sRGBToLinear",
@@ -39813,7 +39828,7 @@ class PerformanceMesh {
  * @private
  */
 class ScratchMemory {
-
+    /** @private */
     constructor() {
         this._uint8Arrays = {};
         this._float32Arrays = {};
@@ -63401,7 +63416,7 @@ const defaultQuaternion = math.identityQuaternion();
  *     isObject: true
  * });
  ````
- *
+ * @private
  * @implements {Drawable}
  * @implements {Entity}
  */
@@ -70810,15 +70825,7 @@ class GLTFLoaderPlugin extends Plugin {
     constructor(viewer, cfg = {}) {
 
         super("GLTFLoader", viewer, cfg);
-
-        /**
-         * @private
-         */
         this._sceneGraphLoader = new GLTFSceneGraphLoader(this, cfg);
-
-        /**
-         * @private
-         */
         this._performanceModelLoader = new GLTFPerformanceModelLoader(this, cfg);
 
         this.dataSource = cfg.dataSource;
@@ -71340,7 +71347,9 @@ function CubeTextureCanvas(viewer, cfg = {}) {
     this.getImage = function () {
         return this._textureCanvas;
     };
-
+    /**
+     * @private
+     */
     this.destroy = function () {
         if (this._textureCanvas) {
             this._textureCanvas.parentNode.removeChild(this._textureCanvas);
@@ -79817,6 +79826,8 @@ class XKTDefaultDataSource {
          *
          * console.log(deflate.result);
          * ```
+         * @private
+         * @return {*}
          **/
         function Deflate(options) {
             if (!(this instanceof Deflate)) return new Deflate(options);
@@ -80191,6 +80202,8 @@ class XKTDefaultDataSource {
          *
          * console.log(inflate.result);
          * ```
+         * @private
+         * @return {*}
          **/
         function Inflate(options) {
             if (!(this instanceof Inflate)) return new Inflate(options);
@@ -100307,7 +100320,7 @@ class MousePanRotateDollyHandler {
             }
 
             e.preventDefault();
-        });
+        }, {passive: true});
     }
 
     reset() {
